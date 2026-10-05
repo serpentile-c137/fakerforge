@@ -186,6 +186,27 @@ rows = Generator(fake).generate(schema, count=3)
 
 The source distribution includes `examples/quickstart.py` and `docs/architecture.md`.
 
+## Project plan and batches
+
+`load` reads a project document. `plan` checks providers and dependencies and reports generation order, row counts, and tables that can be generated together. It does not draw rows. `estimated_bytes_per_row` is a placeholder of 64 bytes per column, not a measured size.
+
+`iter_batches` yields chunks. Concatenating them matches `generate` for the same seed and schema. `generate` still returns the full in-memory dataset. Execution stays single-threaded. The dependency graph names parallel groups for later releases.
+
+JSON works with the base install. YAML needs `pip install "fakerforge[yaml]"`. Documents are parsed as data and are not executed. Distribution draws stay reproducible for a given backend. NumPy and the standard library do not emit the same series, so reproducibility includes whether NumPy is installed.
+
+```python
+from fakerforge import FakerForge
+
+forge = FakerForge(seed=42)
+project = forge.load("examples/projects/minimal/project.json")
+plan = forge.plan(project)
+
+for batch in forge.iter_batches(project.tables, batch_size=2):
+    print(batch.table, len(batch))
+```
+
+`ARCHITECTURE_AUDIT.md` describes the current architecture and the roadmap.
+
 ## This release
 
 | Piece | What 0.1 provides |

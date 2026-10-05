@@ -1,0 +1,22 @@
+{
+  "project": {
+    "name": "minimal",
+    "seed": 42
+  },
+  "tables": {
+    "customers": {
+      "rows": 5,
+      "fields": {
+        "customer_id": {"type": "uuid", "unique": true},
+        "name": {"provider": "person.name"}
+      }
+    },
+    "orders": {
+      "rows": 10,
+      "fields": {
+        "order_id": {"type": "uuid", "unique": true},
+        "customer_id": {"references": "customers.customer_id"}
+      }
+    }
+  }
+}

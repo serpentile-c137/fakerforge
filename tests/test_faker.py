@@ -7,7 +7,7 @@ from fakerforge import FakerForge, __version__
 
 
 def test_version() -> None:
-    assert __version__ == "0.1.0"
+    assert __version__ == "0.2.0"
 
 
 def test_public_methods_return_strings() -> None:

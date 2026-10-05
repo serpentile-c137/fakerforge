@@ -5,6 +5,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from fakerforge.graph.dag import topological_order
+
 TYPES = ("string", "integer", "float", "boolean", "uuid", "date")
 _KEYS = frozenset(
     {
@@ -552,38 +554,7 @@ def _topological_order(
     dependencies: dict[str, tuple[str, ...]],
 ) -> tuple[list[str], list[str]]:
     """Return a stable order and any names left in a cycle."""
-    index = {name: position for position, name in enumerate(names)}
-    incoming = {
-        name: {
-            item
-            for item in dependencies.get(name, ())
-            if item in index and item != name
-        }
-        for name in names
-    }
-    dependents: dict[str, list[str]] = {name: [] for name in names}
-    for name, deps in incoming.items():
-        for dependency in deps:
-            dependents[dependency].append(name)
-    ready = sorted(
-        [name for name, deps in incoming.items() if not deps],
-        key=lambda name: index[name],
-    )
-    order: list[str] = []
-    while ready:
-        name = ready.pop(0)
-        order.append(name)
-        freed: list[str] = []
-        for child in dependents[name]:
-            incoming[child].discard(name)
-            if not incoming[child]:
-                freed.append(child)
-        ready.extend(freed)
-        ready.sort(key=lambda item: index[item])
-    if len(order) == len(names):
-        return order, []
-    remaining = [name for name in names if name not in set(order)]
-    return order, remaining
+    return topological_order(names, dependencies)
 
 
 @dataclass(frozen=True, slots=True)

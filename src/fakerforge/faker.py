@@ -1,12 +1,16 @@
 """Faker-compatible entry point."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 from faker import Faker
 from faker.providers import BaseProvider
 
+from fakerforge.core.plan import GenerationPlan
+from fakerforge.core.project import Project, load_project
 from fakerforge.distributions.engine import DistributionEngine
+from fakerforge.generation.batch import Batch, iter_batches
 from fakerforge.providers.finance import FinanceProvider
 from fakerforge.schema.dataset import DatabaseSchema, DatasetSchema
 from fakerforge.schema.generate import generate_dataset
@@ -177,6 +181,77 @@ class FakerForge:
                 without inventing a value.
         """
         return generate_dataset(self, schema, rows=rows)
+
+    def load(self, source: str | Path | Mapping[str, Any]) -> Project:
+        """Load a project document.
+
+        The document has ``project.name``, an optional ``project.seed``, and
+        ``tables`` in the same shape ``generate`` accepts for a relational
+        schema. JSON and YAML files are parsed as data. This method does not
+        generate rows and does not reseed this instance.
+
+        Args:
+            source: A project mapping, or a path to ``.json``, ``.yaml``, or
+                ``.yml``. YAML requires ``pip install 'fakerforge[yaml]'``.
+
+        Returns:
+            The loaded project. Call :meth:`plan` to validate it.
+
+        Raises:
+            PlanError: The document or file is invalid.
+        """
+        return load_project(source)
+
+    def plan(self, project: Project) -> GenerationPlan:
+        """Validate a project and describe how it would be generated.
+
+        The plan reports row counts, generation order, and tables that do
+        not depend on each other. It checks that providers are registered.
+        It does not draw values. ``estimated_bytes_per_row`` is a placeholder
+        of 64 bytes per column, not a measured size.
+
+        Args:
+            project: Project returned by :meth:`load`.
+
+        Returns:
+            The generation plan.
+
+        Raises:
+            PlanError: The project has a circular dependency.
+            SchemaError: A table, field, or provider is invalid.
+        """
+        return project.generation_plan(self)
+
+    def iter_batches(
+        self,
+        schema: Mapping[str, Any] | DatasetSchema | DatabaseSchema,
+        *,
+        rows: int | Mapping[str, int] | None = None,
+        batch_size: int = 1000,
+    ) -> Iterator[Batch]:
+        """Yield generated rows in chunks of at most ``batch_size``.
+
+        Concatenating the chunks matches :meth:`generate` for the same
+        seed and schema. This method does not keep earlier chunks. Use
+        :meth:`generate` when the full in-memory result is required.
+
+        Args:
+            schema: A field mapping, dataset, table mapping, or database.
+            rows: Row count for one table, or per-table counts. Relational
+                tables can store ``rows`` on each table instead.
+            batch_size: Maximum rows in each chunk. The default is 1000.
+
+        Yields:
+            :class:`~fakerforge.generation.Batch` objects in generation
+            order.
+
+        Raises:
+            ValueError: ``rows`` or ``batch_size`` is invalid.
+            SchemaError: The schema or its providers are invalid.
+            GenerationError: A unique value or foreign key cannot be filled
+                without inventing a value.
+        """
+        return iter_batches(self, schema, rows=rows, batch_size=batch_size)
 
     def add_provider(self, provider: type[BaseProvider] | BaseProvider) -> None:
         """Register a Faker provider on the underlying instance.

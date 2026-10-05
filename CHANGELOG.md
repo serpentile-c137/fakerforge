@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0 - 2026-10-05
+
+- Add a dependency graph and use it for declarative schema order. Parallel groups are reported and execution stays single-threaded.
+- Add `FakerForge.load` and `FakerForge.plan` for JSON projects, and for YAML when PyYAML is installed. Planning validates providers and dependencies and does not generate rows.
+- Add `FakerForge.iter_batches`. Concatenating chunks matches `generate` for the same seed. `generate` still returns the full in-memory result.
+
 ## 0.1.0 - 2026-09-29
 
 First public release. Requires Python 3.10 or newer.
